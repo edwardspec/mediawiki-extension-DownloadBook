@@ -1,0 +1,20 @@
+{
+	"name": "DownloadBook",
+	"version": "0.0.1",
+	"author": "Edward Chernenko",
+	"url": "https://www.mediawiki.org/wiki/Extension:DownloadBook",
+	"license-name": "GPL-2.0+",
+	"type": "specialpage",
+	"SpecialPages": {
+		"DownloadBook": "MediaWiki\\DownloadBook\\SpecialDownloadBook"
+	},
+	"AutoloadClasses": {
+		"MediaWiki\\DownloadBook\\BookRenderingTask": "includes/BookRenderingTask.php",
+		"MediaWiki\\DownloadBook\\DownloadBookUpdater": "includes/DownloadBookUpdater.php",
+		"MediaWiki\\DownloadBook\\SpecialDownloadBook": "includes/SpecialDownloadBook.php"
+	},
+	"Hooks": {
+		"LoadExtensionSchemaUpdates": "MediaWiki\\DownloadBook\\DownloadBookUpdater::onLoadExtensionSchemaUpdates"
+	},
+	"manifest_version": 2
+}
