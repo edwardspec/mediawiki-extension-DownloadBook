@@ -24,6 +24,7 @@ namespace MediaWiki\DownloadBook;
 
 use FileBackend;
 use Html;
+use MediaWiki\Shell\Shell;
 use RepoGroup;
 use RequestContext;
 use SpecialPage;
@@ -180,9 +181,14 @@ class BookRenderingTask {
 		$items = $metabook['items'] ?? [];
 
 		$html = '';
+		$html .= Html::openElement( 'html' );
 		if ( $bookTitle ) {
-			$html .= Html::element( 'h1', null, $bookTitle );
+			$html .= Html::openElement( 'head' );
+			$html .= Html::element( 'title', null, $bookTitle );
+			$html .= Html::closeElement( 'head' );
 		}
+
+		$html .= Html::openElement( 'body' );
 
 		if ( $bookSubtitle ) {
 			$html .= Html::element( 'h2', null, $bookSubtitle );
@@ -217,7 +223,10 @@ class BookRenderingTask {
 			$html .= "\n\n";
 		}
 
-		// TODO: do the actual rendering of $html by calling external utility like "pandoc"
+		$html .= Html::closeElement( 'body' );
+		$html .= Html::closeElement( 'html' );
+
+		// Do the actual rendering of $html by calling external utility like "pandoc"
 		$tmpFile = $this->convertHtmlTo( $html, $newFormat );
 		if ( !$tmpFile ) {
 			wfDebugLog( 'DownloadBook', 'Failed to convert #' . $this->id . ' into ' . $newFormat );
@@ -243,9 +252,53 @@ class BookRenderingTask {
 	 * @return TempFSFile|false Temporary file with results (if successful) or false.
 	 */
 	protected function convertHtmlTo( $html, $newFormat ) {
-		$tmpFile = TempFSFile::factory( 'converted' );
-		file_put_contents( $tmpFile->getPath(), 'Some text' );
+		global $wgDownloadBookConvertCommand;
 
-		return $tmpFile;
+		if ( !isset( $wgDownloadBookConvertCommand[$newFormat] ) ) {
+			wfDebugLog( 'DownloadBook', "No conversion command for $newFormat" );
+			return false;
+		}
+
+		$inputFile = TempFSFile::factory( 'toconvert' );
+		$inputPath = $inputFile->getPath();
+		file_put_contents( $inputPath, $html );
+
+		// TODO: this is correct for pdf and epub, but not for all formats.
+		$fileExtension = strtolower( $newFormat );
+
+		$outputFile = TempFSFile::factory( 'converted', $fileExtension );
+		$outputPath = $outputFile->getPath();
+
+		$command = str_replace(
+			[ '{INPUT}', '{OUTPUT}' ],
+			[ $inputPath, $outputPath ],
+			$wgDownloadBookConvertCommand[$newFormat]
+		);
+
+		wfDebugLog( 'DownloadBook', "Attempting to convert HTML=[$html] into [$newFormat]..." );
+
+		// Workaround for "pandoc" trying to use current directory
+		// (to which it doesn't have write access) for its own temporary files.
+		$currentDirectory = getcwd();
+		chdir( wfTempDir() );
+
+		$limits = [ 'memory' => -1, 'filesize' => -1, 'time' => -1, 'walltime' => -1 ];
+		$ret = Shell::command( [] )
+			->unsafeParams( explode( ' ', $command ) )
+			->limits( $limits )
+			//->restrict( Shell::NO_ROOT )
+			->execute();
+
+		chdir( $currentDirectory );
+
+		if ( $ret->getExitCode() != 0 ) {
+			wfDebugLog( 'DownloadBook', "Conversion command has failed: command=[$command], " .
+				"output=[" . $ret->getStdout() . "], stderr=[" . $ret->getStderr() . "]" );
+			return false;
+		}
+
+		wfDebugLog( 'DownloadBook', 'Generated successfully: outputFile contains ' . file_get_contents( $outputPath ) );
+
+		return $outputFile;
 	}
 }

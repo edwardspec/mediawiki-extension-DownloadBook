@@ -16,5 +16,13 @@
 	"Hooks": {
 		"LoadExtensionSchemaUpdates": "MediaWiki\\DownloadBook\\DownloadBookUpdater::onLoadExtensionSchemaUpdates"
 	},
+	"config": {
+		"DownloadBookConvertCommand": {
+                        "value": {
+				"pdf": "/usr/bin/pandoc --pdf-engine weasyprint --from=html -t html {INPUT} -o {OUTPUT}"
+			},
+			"description": "Shell commands that convert HTML into other formats, e.g. PDF or ePub."
+                }
+	},
 	"manifest_version": 2
 }
