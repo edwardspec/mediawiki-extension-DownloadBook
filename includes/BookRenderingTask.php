@@ -297,7 +297,7 @@ class BookRenderingTask {
 			return false;
 		}
 
-		wfDebugLog( 'DownloadBook', 'Generated successfully: outputFile contains ' . file_get_contents( $outputPath ) );
+		wfDebugLog( 'DownloadBook', 'Generated successfully: outputFile contains ' . filesize( $outputPath ) . ' bytes.' );
 
 		return $outputFile;
 	}
