@@ -172,7 +172,6 @@ class BookRenderingTask {
 	/**
 	 * @param array $metabook
 	 * @param string $newFormat
-	 * @return string collection_id
 	 */
 	protected function startRendering( array $metabook, $newFormat ) {
 		wfDebugLog( 'DownloadBook', "Going to render #" . $this->id );
