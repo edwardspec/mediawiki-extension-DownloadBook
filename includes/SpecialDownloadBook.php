@@ -49,6 +49,8 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 			$task = BookRenderingTask::newFromId( $collectionId );
 			$ret = $task->getRenderStatus();
 		} elseif ( $command === 'render' ) {
+			$newFormat = $request->getVal( 'writer', 'rl' );
+
 			$json = $request->getVal( 'metabook', '' );
 			$status = FormatJson::parse( $json, FormatJson::FORCE_ASSOC );
 			if ( !$status->isOK() ) {
@@ -57,7 +59,7 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 			$metabook = $status->value;
 
 			// Start new rendering
-			$collectionId = BookRenderingTask::createNew( $metabook );
+			$collectionId = BookRenderingTask::createNew( $metabook, $newFormat );
 			$ret = [ 'collection_id' => $collectionId ];
 		} else {
 			throw new MWException( 'Unknown command.' );

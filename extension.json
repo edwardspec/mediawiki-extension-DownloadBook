@@ -19,9 +19,19 @@
 	"config": {
 		"DownloadBookConvertCommand": {
                         "value": {
-				"pdf": "/usr/bin/pandoc --pdf-engine weasyprint --from=html -t html {INPUT} -o {OUTPUT}"
+				"rl": "weasyprint {INPUT} {OUTPUT}",
+				"epub": "pandoc --from=html --to=epub {INPUT} -o {OUTPUT}",
+				"odf": "pandoc --from=html --to=odt {INPUT} -o {OUTPUT}"
 			},
-			"description": "Shell commands that convert HTML into other formats, e.g. PDF or ePub."
+			"description": "Shell commands that convert HTML into other formats, e.g. PDF or ePub. Keys are formats from Extension:Collection (e.g. \"rl\" for PDF)."
+                },
+                "DownloadBookFileExtension": {
+			 "value": {
+				"rl": "pdf",
+				"epub": "epub",
+				"odf": "odt"
+			},
+			"description": "Maps of formats from Extension:Collection (e.g. \"rl\") to filename extensions (e.g. \"pdf\")"
                 }
 	},
 	"manifest_version": 2

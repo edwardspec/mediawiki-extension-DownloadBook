@@ -61,9 +61,10 @@ class BookRenderingTask {
 	/**
 	 * Start rendering a new collection.
 	 * @param array $metabook Parameters of book, as supplied by Extension:Collection.
+	 * @param string $newFormat One of the keys in $wgDownloadBookConvertCommand array.
 	 * @return int Value of collection_id (to be returned to Extension:Collection).
 	 */
-	public static function createNew( array $metabook ) {
+	public static function createNew( array $metabook, $newFormat ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->insert( 'bookrenderingtask', [
 			'brt_timestamp' => $dbw->timestamp(),
@@ -74,7 +75,7 @@ class BookRenderingTask {
 		$id = $dbw->insertId();
 
 		$task = new self( $id );
-		$task->startRendering( $metabook );
+		$task->startRendering( $metabook, $newFormat );
 
 		return $id;
 	}
@@ -173,7 +174,7 @@ class BookRenderingTask {
 	 * @param string $newFormat
 	 * @return string collection_id
 	 */
-	protected function startRendering( array $metabook, $newFormat = 'pdf' ) {
+	protected function startRendering( array $metabook, $newFormat ) {
 		wfDebugLog( 'DownloadBook', "Going to render #" . $this->id );
 
 		$bookTitle = $metabook['title'] ?? '';
@@ -252,19 +253,20 @@ class BookRenderingTask {
 	 * @return TempFSFile|false Temporary file with results (if successful) or false.
 	 */
 	protected function convertHtmlTo( $html, $newFormat ) {
-		global $wgDownloadBookConvertCommand;
+		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension;
 
-		if ( !isset( $wgDownloadBookConvertCommand[$newFormat] ) ) {
+		$newFormat = strtolower( $newFormat );
+		$command = $wgDownloadBookConvertCommand[$newFormat] ?? '';
+		if ( !$command ) {
 			wfDebugLog( 'DownloadBook', "No conversion command for $newFormat" );
 			return false;
 		}
 
-		$inputFile = TempFSFile::factory( 'toconvert' );
+		$fileExtension = $wgDownloadBookFileExtension[$newFormat] ?? $newFormat;
+
+		$inputFile = TempFSFile::factory( 'toconvert', 'html' );
 		$inputPath = $inputFile->getPath();
 		file_put_contents( $inputPath, $html );
-
-		// TODO: this is correct for pdf and epub, but not for all formats.
-		$fileExtension = strtolower( $newFormat );
 
 		$outputFile = TempFSFile::factory( 'converted', $fileExtension );
 		$outputPath = $outputFile->getPath();
