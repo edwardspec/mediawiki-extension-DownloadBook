@@ -24,12 +24,14 @@ namespace MediaWiki\DownloadBook;
 
 use FileBackend;
 use Html;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Shell\Shell;
 use RepoGroup;
 use RequestContext;
 use SpecialPage;
 use TempFSFile;
 use Title;
+use UploadStashException;
 use User;
 use WikiPage;
 
@@ -44,10 +46,16 @@ class BookRenderingTask {
 	protected $id;
 
 	/**
+	 * @var LoggerFactory
+	 */
+	protected $logger;
+
+	/**
 	 * @param int $id
 	 */
 	protected function __construct( $id ) {
 		$this->id = $id;
+		$this->logger = LoggerFactory::getInstance( 'DownloadBook' );
 	}
 
 	/**
@@ -113,20 +121,37 @@ class BookRenderingTask {
 			[ 'brt_id' => $this->id ],
 			__METHOD__
 		);
-		if ( !$row || $row->state == self::STATE_FAILED ) {
+		if ( !$row  ) {
+			$this->logger->warning( 'getRenderStatus(): task #' . $this->id . ' not found.' );
+			return [ 'state' => 'failed' ];
+		}
+
+
+		if ( $row->state == self::STATE_FAILED ) {
+			$this->logger->warning( 'getRenderStatus(): found task #' . $this->id .
+				', its state is FAILED.' );
 			return [ 'state' => 'failed' ];
 		}
 
 		if ( $row->state == self::STATE_PENDING ) {
+			$this->logger->warning( 'getRenderStatus(): found task #' . $this->id .
+				', its state is PENDING: conversion started, but not completed (yet?).' );
 			return [ 'state' => 'pending' ];
 		}
 
 		if ( $row->state == self::STATE_FINISHED && $row->stash_key ) {
-			wfDebugLog( 'DownloadBook', "getRenderStatus(): found finished task" );
+			$this->logger->warning( 'getRenderStatus(): found task #' . $this->id .
+				', its state is FINISHED: conversion was successful.' );
 
 			// If the rendering is finished, then the resulting file is stored
 			// in the stash.
-			$file = $this->getUploadStash()->getFile( $row->stash_key );
+			try {
+				$file = $this->getUploadStash()->getFile( $row->stash_key );
+			} catch ( UploadStashException $e ) {
+				$this->logger->error( 'Failed to load #' . $this->id .
+					' from the UploadStash: ' . (string)$e );
+				return [ 'state' => 'failed' ];
+			}
 
 			return [
 				'state' => 'finished',
@@ -141,6 +166,8 @@ class BookRenderingTask {
 		}
 
 		// Unknown state
+		$this->logger->error( 'getRenderStatus(): found task #' . $this->id .
+			' with unknown state=[' . $row->state . ']' );
 		return [ 'state' => 'failed' ];
 	}
 
@@ -148,7 +175,7 @@ class BookRenderingTask {
 	 * Print contents of resulting file to STDOUT as a fully formatted HTTP response.
 	 */
 	public function stream() {
-		wfDebugLog( 'DownloadBook', "Going to stream #" . $this->id );
+		$this->logger->debug( "[BookRenderingTask] Going to stream #" . $this->id );
 
 		$dbr = wfGetDB( DB_REPLICA );
 		$stashKey = $dbr->selectField( 'bookrenderingtask', 'brt_stash_key',
@@ -156,6 +183,8 @@ class BookRenderingTask {
 			__METHOD__
 		);
 		if ( !$stashKey ) {
+			$this->logger->error( '[BookRenderingTask] stream(#' . $this->id . '): ' .
+				'stashKey not found in the database.' );
 			throw new MWException( 'Rendered file is not available.' );
 		}
 
@@ -174,7 +203,8 @@ class BookRenderingTask {
 	 * @param string $newFormat
 	 */
 	protected function startRendering( array $metabook, $newFormat ) {
-		wfDebugLog( 'DownloadBook', "Going to render #" . $this->id );
+		$this->logger->debug( "[BookRenderingTask] Going to render #" . $this->id .
+			", newFormat=[$newFormat]." );
 
 		$bookTitle = $metabook['title'] ?? '';
 		$bookSubtitle = $metabook['subtitle'] ?? '';
@@ -229,20 +259,29 @@ class BookRenderingTask {
 		// Do the actual rendering of $html by calling external utility like "pandoc"
 		$tmpFile = $this->convertHtmlTo( $html, $newFormat );
 		if ( !$tmpFile ) {
-			wfDebugLog( 'DownloadBook', 'Failed to convert #' . $this->id . ' into ' . $newFormat );
+			$this->logger->error( '[BookRenderingTask] Failed to convert #' . $this->id . ' into ' . $newFormat );
 			$this->changeState( self::STATE_FAILED );
 			return;
 		}
 
 		$stash = $this->getUploadStash();
-		$stashFile = $stash->stashFile( $tmpFile->getPath() );
+		$stashFile = null;
+		try {
+			$stashFile = $stash->stashFile( $tmpFile->getPath() );
+		} catch ( UploadStashException $e ) {
+			$this->logger->error( '[BookRenderingTask] Failed to save #' . $this->id .
+				' into the UploadStash: ' . (string)$e );
+		}
+
 		if ( !$stashFile ) {
 			$this->changeState( self::STATE_FAILED );
 			return;
 		}
 
-		wfDebugLog( 'DownloadBook', 'Successfully converted #' . $this->id );
-		$this->changeState( self::STATE_FINISHED, $stashFile->getFileKey() );
+		$stashKey = $stashFile->getFileKey();
+		$this->logger->debug( '[BookRenderingTask] Successfully converted #' . $this->id . ": stashKey=$stashKey" );
+
+		$this->changeState( self::STATE_FINISHED, $stashKey );
 	}
 
 	/**
@@ -257,7 +296,7 @@ class BookRenderingTask {
 		$newFormat = strtolower( $newFormat );
 		$command = $wgDownloadBookConvertCommand[$newFormat] ?? '';
 		if ( !$command ) {
-			wfDebugLog( 'DownloadBook', "No conversion command for $newFormat" );
+			$this->logger->error( "No conversion command for $newFormat" );
 			return false;
 		}
 
@@ -276,7 +315,7 @@ class BookRenderingTask {
 			$wgDownloadBookConvertCommand[$newFormat]
 		);
 
-		wfDebugLog( 'DownloadBook', "Attempting to convert HTML=[$html] into [$newFormat]..." );
+		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=[$html] into [$newFormat]..." );
 
 		// Workaround for "pandoc" trying to use current directory
 		// (to which it doesn't have write access) for its own temporary files.
@@ -293,12 +332,13 @@ class BookRenderingTask {
 		chdir( $currentDirectory );
 
 		if ( $ret->getExitCode() != 0 ) {
-			wfDebugLog( 'DownloadBook', "Conversion command has failed: command=[$command], " .
+			$this->logger->error( "Conversion command has failed: command=[$command], " .
 				"output=[" . $ret->getStdout() . "], stderr=[" . $ret->getStderr() . "]" );
 			return false;
 		}
 
-		wfDebugLog( 'DownloadBook', 'Generated successfully: outputFile contains ' . filesize( $outputPath ) . ' bytes.' );
+		$this->logger->debug( '[BookRenderingTask] Generated successfully: outputFile contains ' .
+			filesize( $outputPath ) . ' bytes.' );
 
 		return $outputFile;
 	}

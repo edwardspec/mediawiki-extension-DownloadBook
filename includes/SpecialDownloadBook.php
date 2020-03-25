@@ -23,6 +23,7 @@
 namespace MediaWiki\DownloadBook;
 
 use FormatJson;
+use MediaWiki\Logger\LoggerFactory;
 use MWException;
 use UnlistedSpecialPage;
 
@@ -42,6 +43,10 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 			return;
 		}
 
+		$logger = LoggerFactory::getInstance( 'DownloadBook' );
+		$logger->debug( '[Special:DownloadBook] Received API request: ' .
+			FormatJson::encode( $request->getValues() ) );
+
 		$ret = [];
 		if ( $command === 'render_status' ) {
 			// Report whether the rendering is finished or not.
@@ -54,6 +59,7 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 			$json = $request->getVal( 'metabook', '' );
 			$status = FormatJson::parse( $json, FormatJson::FORCE_ASSOC );
 			if ( !$status->isOK() ) {
+				$logger->error( '[Special:DownloadBook] command=render: Malformed metabook parameter.' );
 				throw new MWException( 'Malformed metabook parameter.' );
 			}
 			$metabook = $status->value;
@@ -62,8 +68,12 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 			$collectionId = BookRenderingTask::createNew( $metabook, $newFormat );
 			$ret = [ 'collection_id' => $collectionId ];
 		} else {
+			$logger->error( "[Special:DownloadBook] Unknown command: [$command]" );
 			throw new MWException( 'Unknown command.' );
 		}
+
+		$logger->debug( "[Special:DownloadBook] Sending API response to command=$command: " .
+			FormatJson::encode( $ret ) );
 
 		$this->getOutput()->disable();
 		$request->response()->statusHeader( 200 );
