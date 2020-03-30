@@ -11,10 +11,12 @@
 	"AutoloadClasses": {
 		"MediaWiki\\DownloadBook\\BookRenderingTask": "includes/BookRenderingTask.php",
 		"MediaWiki\\DownloadBook\\DownloadBookUpdater": "includes/DownloadBookUpdater.php",
+		"MediaWiki\\DownloadBook\\Hooks": "includes/Hooks.php",
 		"MediaWiki\\DownloadBook\\SpecialDownloadBook": "includes/SpecialDownloadBook.php"
 	},
 	"Hooks": {
-		"LoadExtensionSchemaUpdates": "MediaWiki\\DownloadBook\\DownloadBookUpdater::onLoadExtensionSchemaUpdates"
+		"LoadExtensionSchemaUpdates": "MediaWiki\\DownloadBook\\DownloadBookUpdater::onLoadExtensionSchemaUpdates",
+		"UserGetReservedNames": "MediaWiki\\DownloadBook\\Hooks::onUserGetReservedNames"
 	},
 	"config": {
 		"DownloadBookConvertCommand": {
