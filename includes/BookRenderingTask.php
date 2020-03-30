@@ -22,6 +22,7 @@
 
 namespace MediaWiki\DownloadBook;
 
+use DeferredUpdates;
 use FileBackend;
 use Html;
 use MediaWiki\Logger\LoggerFactory;
@@ -82,8 +83,14 @@ class BookRenderingTask {
 
 		$id = $dbw->insertId();
 
-		$task = new self( $id );
-		$task->startRendering( $metabook, $newFormat );
+		// Conversion itself can take a long time for large Collections,
+		// so we marked state as PENDING and will later mark it as either FINISHED or FAILED
+		// when startRendering() is completed.
+		// Note: Extension:Collection itself has "check status, wait and retry" logic.
+		DeferredUpdates::addCallableUpdate( function () use ( $id, $metabook, $newFormat ) {
+			$task = new self( $id );
+			$task->startRendering( $metabook, $newFormat );
+		} );
 
 		return $id;
 	}
