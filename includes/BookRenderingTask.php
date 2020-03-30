@@ -322,7 +322,7 @@ class BookRenderingTask {
 			$wgDownloadBookConvertCommand[$newFormat]
 		);
 
-		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=[$html] into [$newFormat]..." );
+		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=(" . strlen( $html ) . " bytes omitted) into [$newFormat]..." );
 
 		// Workaround for "pandoc" trying to use current directory
 		// (to which it doesn't have write access) for its own temporary files.
