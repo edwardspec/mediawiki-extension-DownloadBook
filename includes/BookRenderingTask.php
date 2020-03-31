@@ -267,6 +267,15 @@ class BookRenderingTask {
 		$html .= Html::closeElement( 'body' );
 		$html .= Html::closeElement( 'html' );
 
+		// Replace relative URLs in <img> tags with absolute URLs,
+		// otherwise conversion tool won't know where to download these images from.
+		global $wgCanonicalServer;
+		$html = str_replace(
+			' src="/',
+			' src="' . $wgCanonicalServer . '/',
+			$html
+		);
+
 		// Do the actual rendering of $html by calling external utility like "pandoc"
 		$tmpFile = $this->convertHtmlTo( $html, $newFormat );
 		if ( !$tmpFile ) {
@@ -302,7 +311,7 @@ class BookRenderingTask {
 	 * @return TempFSFile|false Temporary file with results (if successful) or false.
 	 */
 	protected function convertHtmlTo( $html, $newFormat ) {
-		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension, $wgCanonicalServer;
+		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension;
 
 		$newFormat = strtolower( $newFormat );
 		$command = $wgDownloadBookConvertCommand[$newFormat] ?? '';
@@ -321,8 +330,8 @@ class BookRenderingTask {
 		$outputPath = $outputFile->getPath();
 
 		$command = str_replace(
-			[ '{INPUT}', '{OUTPUT}', '{BASE_URL}' ],
-			[ $inputPath, $outputPath, $wgCanonicalServer ],
+			[ '{INPUT}', '{OUTPUT}' ],
+			[ $inputPath, $outputPath ],
 			$wgDownloadBookConvertCommand[$newFormat]
 		);
 
