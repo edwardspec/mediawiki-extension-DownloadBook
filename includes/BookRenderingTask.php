@@ -114,6 +114,10 @@ class BookRenderingTask {
 	 */
 	protected function getUploadStash() {
 		$user = User::newSystemUser( 'DownloadBookStash', [ 'steal' => true ] );
+		if ( !$user ) {
+			$this->logger->error( 'getUploadStash(): failed to create User:DownloadBookStash.' );
+		}
+
 		return RepoGroup::singleton()->getLocalRepo()->getUploadStash( $user );
 	}
 
