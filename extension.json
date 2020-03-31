@@ -21,7 +21,7 @@
 	"config": {
 		"DownloadBookConvertCommand": {
                         "value": {
-				"rl": "weasyprint {INPUT} {OUTPUT}",
+				"rl": "weasyprint --encoding utf8 --base-url {BASE_URL} {INPUT} {OUTPUT}",
 				"epub": "pandoc --from=html --to=epub {INPUT} -o {OUTPUT}",
 				"odf": "pandoc --from=html --to=odt {INPUT} -o {OUTPUT}"
 			},

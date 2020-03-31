@@ -302,7 +302,7 @@ class BookRenderingTask {
 	 * @return TempFSFile|false Temporary file with results (if successful) or false.
 	 */
 	protected function convertHtmlTo( $html, $newFormat ) {
-		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension;
+		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension, $wgCanonicalServer;
 
 		$newFormat = strtolower( $newFormat );
 		$command = $wgDownloadBookConvertCommand[$newFormat] ?? '';
@@ -321,8 +321,8 @@ class BookRenderingTask {
 		$outputPath = $outputFile->getPath();
 
 		$command = str_replace(
-			[ '{INPUT}', '{OUTPUT}' ],
-			[ $inputPath, $outputPath ],
+			[ '{INPUT}', '{OUTPUT}', '{BASE_URL}' ],
+			[ $inputPath, $outputPath, $wgCanonicalServer ],
 			$wgDownloadBookConvertCommand[$newFormat]
 		);
 
