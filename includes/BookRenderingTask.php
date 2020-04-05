@@ -27,6 +27,7 @@ use FileBackend;
 use Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Shell\Shell;
+use MWException;
 use RepoGroup;
 use RequestContext;
 use SpecialPage;
@@ -47,7 +48,7 @@ class BookRenderingTask {
 	protected $id;
 
 	/**
-	 * @var LoggerFactory
+	 * @var \Psr\Log\LoggerInterface
 	 */
 	protected $logger;
 
@@ -116,7 +117,7 @@ class BookRenderingTask {
 
 	/**
 	 * Get UploadStash where the results of rendering (e.g. .PDF files) are stored.
-	 * @return UploadStash
+	 * @return \UploadStash
 	 */
 	protected function getUploadStash() {
 		$user = User::newSystemUser( 'DownloadBookStash', [ 'steal' => true ] );
@@ -243,7 +244,7 @@ class BookRenderingTask {
 		$html .= Html::openElement( 'html' );
 		if ( $bookTitle ) {
 			$html .= Html::openElement( 'head' );
-			$html .= Html::element( 'title', null, $bookTitle );
+			$html .= Html::element( 'title', [], $bookTitle );
 			$html .= Html::closeElement( 'head' );
 
 			$metadata['title'] = $bookTitle;
@@ -252,7 +253,7 @@ class BookRenderingTask {
 		$html .= Html::openElement( 'body' );
 
 		if ( $bookSubtitle ) {
-			$html .= Html::element( 'h2', null, $bookSubtitle );
+			$html .= Html::element( 'h2', [], $bookSubtitle );
 		}
 
 		foreach ( $items as $item ) {
@@ -291,7 +292,7 @@ class BookRenderingTask {
 			$popts = RequestContext::getMain()->getOutput()->parserOptions();
 			$pout = $content->getParserOutput( $title, 0, $popts, true );
 
-			$html .= Html::element( 'h1', null, $title->getFullText() );
+			$html .= Html::element( 'h1', [], $title->getFullText() );
 			$html .= $pout->getText( [ 'enableSectionEditLinks' => false ] );
 			$html .= "\n\n";
 		}

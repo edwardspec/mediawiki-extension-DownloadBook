@@ -32,6 +32,9 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 		parent::__construct( 'DownloadBook' );
 	}
 
+	/**
+	 * @param string $par @phan-unused-param
+	 */
 	public function execute( $par = '' ) {
 		$request = $this->getRequest();
 		$command = $request->getVal( 'command' );
@@ -47,7 +50,6 @@ class SpecialDownloadBook extends UnlistedSpecialPage {
 		$logger->debug( '[Special:DownloadBook] Received API request: ' .
 			FormatJson::encode( $request->getValues() ) );
 
-		$ret = [];
 		if ( $command === 'render_status' ) {
 			// Report whether the rendering is finished or not.
 			// If it is, result will include URL to download the resulting file

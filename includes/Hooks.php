@@ -25,10 +25,10 @@ namespace MediaWiki\DownloadBook;
 class Hooks {
 	/**
 	 * Mark username "DownloadBookStash" as reserved.
-	 * @param string[] $reservedUsernames
+	 * @param string[] &$reservedUsernames
 	 * @return bool
 	 */
-	public static function onUserGetReservedNames( array $reservedUsernames ) {
+	public static function onUserGetReservedNames( array &$reservedUsernames ) {
 		$reservedUsernames[] = 'DownloadBookStash';
 		return true;
 	}
