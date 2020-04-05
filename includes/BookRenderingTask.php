@@ -221,12 +221,19 @@ class BookRenderingTask {
 		$bookSubtitle = $metabook['subtitle'] ?? '';
 		$items = $metabook['items'] ?? [];
 
+		// This is an arbitrary metadata like 'title' and 'author' that can be used in formats
+		// like ePub, etc. All these values are optional, and they are not included into HTML
+		// directly (instead they are passed to the conversion command as parameters)
+		$metadata = [];
+
 		$html = '';
 		$html .= Html::openElement( 'html' );
 		if ( $bookTitle ) {
 			$html .= Html::openElement( 'head' );
 			$html .= Html::element( 'title', null, $bookTitle );
 			$html .= Html::closeElement( 'head' );
+
+			$metadata['title'] = $bookTitle;
 		}
 
 		$html .= Html::openElement( 'body' );
@@ -246,6 +253,13 @@ class BookRenderingTask {
 			if ( !$title ) {
 				// Ignore invalid titles
 				continue;
+			}
+
+			if ( !isset( $metadata['title'] ) ) {
+				// Either we are exporting 1 article (instead of the entire Book)
+				// or the "Title" field wasn't specified on Special:Book.
+				// In this case consider the title of the first article to be the title of entire book.
+				$metadata['title'] = $title->getFullText();
 			}
 
 			// Add parsed HTML of this article
@@ -277,7 +291,7 @@ class BookRenderingTask {
 		);
 
 		// Do the actual rendering of $html by calling external utility like "pandoc"
-		$tmpFile = $this->convertHtmlTo( $html, $newFormat );
+		$tmpFile = $this->convertHtmlTo( $html, $newFormat, $metadata );
 		if ( !$tmpFile ) {
 			$this->logger->error( '[BookRenderingTask] Failed to convert #' . $this->id . ' into ' . $newFormat );
 			$this->changeState( self::STATE_FAILED );
@@ -308,9 +322,10 @@ class BookRenderingTask {
 	 * Convert HTML into some other format, e.g. PDF.
 	 * @param string $html
 	 * @param string $newFormat Name of format, e.g. "pdf" or "epub"
+	 * @param array $metadata Arbitrary data for conversion tool, e.g. [ 'creator' => 'Some name' ].
 	 * @return TempFSFile|false Temporary file with results (if successful) or false.
 	 */
-	protected function convertHtmlTo( $html, $newFormat ) {
+	protected function convertHtmlTo( $html, $newFormat, array $metadata ) {
 		global $wgDownloadBookConvertCommand, $wgDownloadBookFileExtension;
 
 		$newFormat = strtolower( $newFormat );
@@ -334,6 +349,12 @@ class BookRenderingTask {
 			[ $inputPath, $outputPath ],
 			$wgDownloadBookConvertCommand[$newFormat]
 		);
+
+		// Replace any {METADATA:something} in the command (either with escaped value or empty string).
+		$command = preg_replace_callback( '/\{METADATA:(.*)\}/', function ( $matches ) use ( $metadata ) {
+			$key = $matches[1];
+			return Shell::escape( $metadata[$key] ?? '' );
+		}, $command );
 
 		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=(" . strlen( $html ) . " bytes omitted) into [$newFormat]..." );
 
