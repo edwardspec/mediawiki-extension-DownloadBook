@@ -22,7 +22,7 @@
 		"DownloadBookConvertCommand": {
                         "value": {
 				"rl": "weasyprint --encoding utf8 {INPUT} {OUTPUT}",
-				"epub": "pandoc --from=html --to=epub {INPUT} -o {OUTPUT} --metadata title={METADATA:title}",
+				"epub": "pandoc --from=html --to=epub {INPUT} -o {OUTPUT} --metadata title={METADATA:title} --metadata creator={METADATA:creator}",
 				"odf": "pandoc --from=html --to=odt {INPUT} -o {OUTPUT}"
 			},
 			"description": "Shell commands that convert HTML into other formats, e.g. PDF or ePub. Keys are formats from Extension:Collection (e.g. \"rl\" for PDF)."

@@ -255,6 +255,14 @@ class BookRenderingTask {
 				continue;
 			}
 
+			// Add parsed HTML of this article
+			$page = WikiPage::factory( $title );
+			$content = $page->getContent();
+			if ( !$content ) {
+				// Ignore nonexistent pages, etc.
+				continue;
+			}
+
 			if ( !isset( $metadata['title'] ) ) {
 				// Either we are exporting 1 article (instead of the entire Book)
 				// or the "Title" field wasn't specified on Special:Book.
@@ -262,12 +270,9 @@ class BookRenderingTask {
 				$metadata['title'] = $title->getFullText();
 			}
 
-			// Add parsed HTML of this article
-			$page = WikiPage::factory( $title );
-			$content = $page->getContent();
-			if ( !$content ) {
-				// Ignore nonexistent pages, etc.
-				continue;
+			if ( !isset( $metadata['creator'] ) ) {
+				// Username of user who created the first article in the Book.
+				$metadata['creator'] = $page->getUserText();
 			}
 
 			$popts = RequestContext::getMain()->getOutput()->parserOptions();
@@ -351,7 +356,7 @@ class BookRenderingTask {
 		);
 
 		// Replace any {METADATA:something} in the command (either with escaped value or empty string).
-		$command = preg_replace_callback( '/\{METADATA:(.*)\}/', function ( $matches ) use ( $metadata ) {
+		$command = preg_replace_callback( '/\{METADATA:([^}]+)\}/', function ( $matches ) use ( $metadata ) {
 			$key = $matches[1];
 			return Shell::escape( $metadata[$key] ?? '' );
 		}, $command );
