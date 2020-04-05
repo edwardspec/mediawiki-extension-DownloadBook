@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ruleset>
+	<file>.</file>
+	<arg name="extensions" value="php,php5,inc" />
+	<arg name="encoding" value="UTF-8" />
+
+	<rule ref="./vendor/mediawiki/mediawiki-codesniffer/MediaWiki">
+		<!-- FIXME: this should be fixed -->
+		<exclude name="PSR12.Properties.ConstantVisibility.NotFound" />
+		<exclude name="Generic.Files.LineLength.TooLong" />
+
+		<!-- TODO: missing documentation: this can be fixed -->
+		<exclude name="MediaWiki.Commenting.FunctionComment.MissingDocumentationProtected" />
+		<exclude name="MediaWiki.Commenting.FunctionComment.MissingDocumentationPublic" />
+	</rule>
+</ruleset>

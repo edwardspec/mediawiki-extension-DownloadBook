@@ -142,11 +142,10 @@ class BookRenderingTask {
 			[ 'brt_id' => $this->id ],
 			__METHOD__
 		);
-		if ( !$row  ) {
+		if ( !$row ) {
 			$this->logger->warning( 'getRenderStatus(): task #' . $this->id . ' not found.' );
 			return [ 'state' => 'failed' ];
 		}
-
 
 		if ( $row->state == self::STATE_FAILED ) {
 			$this->logger->warning( 'getRenderStatus(): found task #' . $this->id .
@@ -394,7 +393,7 @@ class BookRenderingTask {
 		$ret = Shell::command( [] )
 			->unsafeParams( explode( ' ', $command ) )
 			->limits( $limits )
-			//->restrict( Shell::NO_ROOT )
+			// ->restrict( Shell::NO_ROOT )
 			->execute();
 
 		chdir( $currentDirectory );
