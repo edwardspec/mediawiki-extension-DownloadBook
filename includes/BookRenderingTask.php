@@ -78,6 +78,7 @@ class BookRenderingTask {
 		$dbw->insert( 'bookrenderingtask', [
 			'brt_timestamp' => $dbw->timestamp(),
 			'brt_state' => self::STATE_PENDING,
+			'brt_disposition' => null,
 			'brt_stash_key' => null
 		], __METHOD__ );
 
@@ -98,11 +99,16 @@ class BookRenderingTask {
 	/**
 	 * @param string $newState
 	 * @param string|null $newStashKey
+	 * @param string|null $newDisposition
 	 */
-	protected function changeState( $newState, $newStashKey = null ) {
+	protected function changeState( $newState, $newStashKey = null, $newDisposition = null ) {
 		$dbw = wfGetDB( DB_MASTER );
 		$dbw->update( 'bookrenderingtask',
-			[ 'brt_state' => $newState, 'brt_stash_key' => $newStashKey ],
+			[
+				'brt_state' => $newState,
+				'brt_stash_key' => $newStashKey,
+				'brt_disposition' => $newDisposition
+			],
 			[ 'brt_id' => $this->id ],
 			__METHOD__
 		);
@@ -128,7 +134,11 @@ class BookRenderingTask {
 	public function getRenderStatus() {
 		$dbr = wfGetDB( DB_REPLICA );
 		$row = $dbr->selectRow( 'bookrenderingtask',
-			[ 'brt_state AS state' ,'brt_stash_key AS stash_key' ],
+			[
+				'brt_state AS state',
+				'brt_disposition AS disposition',
+				'brt_stash_key AS stash_key'
+			],
 			[ 'brt_id' => $this->id ],
 			__METHOD__
 		);
@@ -164,6 +174,10 @@ class BookRenderingTask {
 				return [ 'state' => 'failed' ];
 			}
 
+			// Content-Disposition would normally look like "Name_of_the_article.pdf" or something,
+			// but if it's not available, then the name of the temporary file will do.
+			$disposition = $row->disposition ?: $file->getName();
+
 			return [
 				'state' => 'finished',
 				'url' => SpecialPage::getTitleFor( 'DownloadBook' )->getLocalURL( [
@@ -172,7 +186,7 @@ class BookRenderingTask {
 				] ),
 				'content_type' => $file->getMimeType(),
 				'content_length' => $file->getSize(),
-				'content_disposition' => FileBackend::makeContentDisposition( 'inline', $file->getName() )
+				'content_disposition' => FileBackend::makeContentDisposition( 'inline', $disposition )
 			];
 		}
 
@@ -320,7 +334,15 @@ class BookRenderingTask {
 		$stashKey = $stashFile->getFileKey();
 		$this->logger->debug( '[BookRenderingTask] Successfully converted #' . $this->id . ": stashKey=$stashKey" );
 
-		$this->changeState( self::STATE_FINISHED, $stashKey );
+		// Form a human-readable name for this file when it gets downloaded via the browser,
+		// e.g. "Name_of_the_article.pdf".
+		$disposition = null;
+		$extension = $tmpFile->extensionFromPath( $tmpFile->getPath() );
+		if ( isset( $metadata['title'] ) && $extension ) {
+			$disposition = strtr( $metadata['title'], ' ', '_' ) . '.' . $extension;
+		}
+
+		$this->changeState( self::STATE_FINISHED, $stashKey, $disposition );
 	}
 
 	/**
