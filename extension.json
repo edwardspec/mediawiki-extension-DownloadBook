@@ -34,6 +34,18 @@
 				"odf": "odt"
 			},
 			"description": "Maps of formats from Extension:Collection (e.g. \"rl\") to filename extensions (e.g. \"pdf\")"
+                },
+		"DownloadBookMetadataFromRegex": {
+                        "value": {
+				"creator": "/Author\\s*=\\s*([^\n]+)/"
+			},
+			"description": "Allows to guess metadata by pattern-matching against the text of the article. Matched value should be surrounded in braces: ( and )."
+                },
+		"DownloadBookDefaultMetadata": {
+                        "value": {
+				"creator": "Default creator"
+			},
+			"description": "Values to put into metadata if respective keys weren't found in any other way. E.g. [ 'creator' => 'Name of site' ]."
                 }
 	},
 	"manifest_version": 2

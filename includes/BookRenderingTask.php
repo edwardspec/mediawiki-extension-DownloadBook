@@ -24,6 +24,7 @@ namespace MediaWiki\DownloadBook;
 
 use DeferredUpdates;
 use FileBackend;
+use FormatJson;
 use Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Shell\Shell;
@@ -32,6 +33,7 @@ use RepoGroup;
 use RequestContext;
 use SpecialPage;
 use TempFSFile;
+use TextContent;
 use Title;
 use UploadStashException;
 use User;
@@ -228,6 +230,8 @@ class BookRenderingTask {
 	 * @param string $newFormat
 	 */
 	protected function startRendering( array $metabook, $newFormat ) {
+		global $wgDownloadBookMetadataFromRegex, $wgDownloadBookDefaultMetadata;
+
 		$this->logger->debug( "[BookRenderingTask] Going to render #" . $this->id .
 			", newFormat=[$newFormat]." );
 
@@ -277,6 +281,11 @@ class BookRenderingTask {
 				continue;
 			}
 
+			if ( !( $content instanceof TextContent ) ) {
+				// Ignore non-text pages.
+				continue;
+			}
+
 			if ( !isset( $metadata['title'] ) ) {
 				// Either we are exporting 1 article (instead of the entire Book)
 				// or the "Title" field wasn't specified on Special:Book.
@@ -284,9 +293,20 @@ class BookRenderingTask {
 				$metadata['title'] = $title->getFullText();
 			}
 
-			if ( !isset( $metadata['creator'] ) ) {
+			if ( !isset( $metadata['creator-user'] ) ) {
 				// Username of user who created the first article in the Book.
-				$metadata['creator'] = $page->getUserText();
+				$metadata['creator-user'] = $page->getUserText();
+			}
+
+			// Allow to guess some metadata by regex-matching versus the text of this article,
+			// e.g. "/Author=([^\n]+)/" to get the name of author from the infobox.
+			foreach ( $wgDownloadBookMetadataFromRegex as $key => $regex ) {
+				if ( !isset( $metadata[$key] ) ) {
+					$matches = null;
+					if ( preg_match( $regex, $content->getText(), $matches ) ) {
+						$metadata[$key] = $matches[1] ?? '';
+					}
+				}
 			}
 
 			$popts = RequestContext::getMain()->getOutput()->parserOptions();
@@ -299,6 +319,9 @@ class BookRenderingTask {
 
 		$html .= Html::closeElement( 'body' );
 		$html .= Html::closeElement( 'html' );
+
+		$metadata += $wgDownloadBookDefaultMetadata;
+		$this->logger->debug( '[BookRenderingTask] Calculated metadata: ' . FormatJson::encode( $metadata ) );
 
 		// Replace relative URLs in <img> tags with absolute URLs,
 		// otherwise conversion tool won't know where to download these images from.
