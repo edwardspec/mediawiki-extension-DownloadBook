@@ -28,8 +28,8 @@ use FormatJson;
 use Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Shell\Shell;
+use MediaWiki\MediaWikiServices;
 use MWException;
-use RepoGroup;
 use RequestContext;
 use SpecialPage;
 use TempFSFile;
@@ -127,7 +127,7 @@ class BookRenderingTask {
 			$this->logger->error( 'getUploadStash(): failed to create User:DownloadBookStash.' );
 		}
 
-		return RepoGroup::singleton()->getLocalRepo()->getUploadStash( $user );
+		return MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo()->getUploadStash( $user );
 	}
 
 	/**
@@ -221,7 +221,7 @@ class BookRenderingTask {
 		$headers[] = 'Content-Disposition: ' .
 			FileBackend::makeContentDisposition( 'inline', $file->getName() );
 
-		$repo = RepoGroup::singleton()->getLocalRepo();
+		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
 		$repo->streamFileWithStatus( $file->getPath(), $headers );
 	}
 
