@@ -2,7 +2,7 @@
 
 /*
 	Extension:DownloadBook - MediaWiki extension.
-	Copyright (C) 2020 Edward Chernenko.
+	Copyright (C) 2020-2024 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -77,7 +77,7 @@ class BookRenderingTask {
 	 * @return int Value of collection_id (to be returned to Extension:Collection).
 	 */
 	public static function createNew( array $metabook, $newFormat ) {
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
 		$dbw->insert( 'bookrenderingtask', [
 			'brt_timestamp' => $dbw->timestamp(),
 			'brt_state' => self::STATE_PENDING,
@@ -105,7 +105,7 @@ class BookRenderingTask {
 	 * @param string|null $newDisposition
 	 */
 	protected function changeState( $newState, $newStashKey = null, $newDisposition = null ) {
-		$dbw = wfGetDB( DB_MASTER );
+		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
 		$dbw->update( 'bookrenderingtask',
 			[
 				'brt_state' => $newState,
@@ -135,7 +135,7 @@ class BookRenderingTask {
 	 * @return array
 	 */
 	public function getRenderStatus() {
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 		$row = $dbr->selectRow( 'bookrenderingtask',
 			[
 				'brt_state AS state',
@@ -204,7 +204,7 @@ class BookRenderingTask {
 	public function stream() {
 		$this->logger->debug( "[BookRenderingTask] Going to stream #" . $this->id );
 
-		$dbr = wfGetDB( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 		$stashKey = $dbr->selectField( 'bookrenderingtask', 'brt_stash_key',
 			[ 'brt_id' => $this->id ],
 			__METHOD__
