@@ -274,7 +274,7 @@ class BookRenderingTask {
 			}
 
 			// Add parsed HTML of this article
-			$page = WikiPage::factory( $title );
+			$page = MediaWikiServices::getInstance()->getWikiPageFactory()->newFromTitle( $title );
 			$content = $page->getContent();
 			if ( !$content ) {
 				// Ignore nonexistent pages, etc.
@@ -309,8 +309,13 @@ class BookRenderingTask {
 				}
 			}
 
+			$localParser = MediaWikiServices::getInstance()->getParser();
 			$popts = RequestContext::getMain()->getOutput()->parserOptions();
-			$pout = $content->getParserOutput( $title, 0, $popts, true );
+			$pout = $localParser->parse(
+				$content->getText(),
+				$title,
+				$popts
+				);
 
 			$html .= Html::element( 'h1', [], $title->getFullText() );
 			$html .= $pout->getText( [ 'enableSectionEditLinks' => false ] );
