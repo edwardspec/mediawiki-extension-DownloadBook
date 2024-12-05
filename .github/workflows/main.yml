@@ -1,0 +1,54 @@
+name: JSON linter + luacheck
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  DBTYPE: mysql
+  DBUSER: root
+
+jobs:
+  # PHP linters: phpcs, parallel-lint, etc.
+  linter:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+            php-version: '8.1'
+            tools: composer
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: buildcache-linter
+      - run: sudo apt-get install -y composer && composer install
+      - run: composer test
+
+  # Phan (PHP static analyzer)
+  phan:
+    runs-on: ubuntu-22.04
+    env:
+      branch: REL1_43
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+            php-version: '8.1'
+            extensions: ast
+            tools: composer
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache
+            buildcache
+          key: buildcache-phan
+      - uses: edwardspec/github-action-build-mediawiki@v1
+        with:
+          branch: ${{ env.branch }}
+          noinstall: 1
+      - name: Install dependencies
+        run: |
+          rsync -a --exclude buildcache --exclude mediawiki --exclude .git . mediawiki/extensions/DownloadBook/
+          cd mediawiki/extensions/DownloadBook
+          composer install
+      - name: RUN -- phan
+        run: cd mediawiki/extensions/DownloadBook && ./vendor/bin/phan --analyze-twice
