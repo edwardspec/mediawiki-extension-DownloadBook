@@ -27,8 +27,8 @@ use FileBackend;
 use FormatJson;
 use Html;
 use MediaWiki\Logger\LoggerFactory;
-use MediaWiki\Shell\Shell;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Shell\Shell;
 use MWException;
 use RequestContext;
 use SpecialPage;
@@ -37,7 +37,6 @@ use TextContent;
 use Title;
 use UploadStashException;
 use User;
-use WikiPage;
 
 class BookRenderingTask {
 	const STATE_FAILED = 'failed';
@@ -91,7 +90,7 @@ class BookRenderingTask {
 		// so we marked state as PENDING and will later mark it as either FINISHED or FAILED
 		// when startRendering() is completed.
 		// Note: Extension:Collection itself has "check status, wait and retry" logic.
-		DeferredUpdates::addCallableUpdate( function () use ( $id, $metabook, $newFormat ) {
+		DeferredUpdates::addCallableUpdate( static function () use ( $id, $metabook, $newFormat ) {
 			$task = new self( $id );
 			$task->startRendering( $metabook, $newFormat );
 		} );
@@ -406,7 +405,7 @@ class BookRenderingTask {
 		);
 
 		// Replace any {METADATA:something} in the command (either with escaped value or empty string).
-		$command = preg_replace_callback( '/\{METADATA:([^}]+)\}/', function ( $matches ) use ( $metadata ) {
+		$command = preg_replace_callback( '/\{METADATA:([^}]+)\}/', static function ( $matches ) use ( $metadata ) {
 			$key = $matches[1];
 			return Shell::escape( $metadata[$key] ?? '' );
 		}, $command );
