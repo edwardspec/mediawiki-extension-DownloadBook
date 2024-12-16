@@ -8,6 +8,9 @@
 	"SpecialPages": {
 		"DownloadBook": "MediaWiki\\DownloadBook\\SpecialDownloadBook"
 	},
+	"ExtensionMessagesFiles": {
+		"DownloadBookAlias": "DownloadBook.alias.php"
+	},
 	"AutoloadClasses": {
 		"MediaWiki\\DownloadBook\\BookRenderingTask": "includes/BookRenderingTask.php",
 		"MediaWiki\\DownloadBook\\DownloadBookUpdater": "includes/DownloadBookUpdater.php",
