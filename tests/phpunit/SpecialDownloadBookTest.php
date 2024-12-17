@@ -22,7 +22,9 @@
 
 namespace MediaWiki\DownloadBook;
 
+use DeferredUpdates;
 use FauxRequest;
+use FormatJson;
 use MWException;
 use SpecialPageTestBase;
 
@@ -65,6 +67,45 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 			'command' => 'render',
 			'metabook' => 'Invalid; JSON;'
 		] );
+	}
+
+	/**
+	 * Checks the result of command=render.
+	 */
+	public function testRender() {
+		// Don't run DeferredUpdates until we check [ 'state' => 'pending' ].
+		$updatesDelayed = DeferredUpdates::preventOpportunisticUpdates();
+		$expectedId = 1;
+
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render',
+			'metabook' => '{}'
+		] ), true );
+		$this->assertSame( [ 'collection_id' => $expectedId ], $ret );
+
+		// Verify that state of this task is "pending",
+		// which should be the case, because DeferredUpdates haven't been called yet.
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render_status',
+			'collection_id' => $expectedId
+		] ), true );
+		$this->assertSame( [ 'state' => 'pending' ], $ret );
+
+		// Run the pending DeferredUpdates.
+		$updatesDelayed = null;
+		DeferredUpdates::tryOpportunisticExecute();
+
+		// Verify that the task was marked as "failed" by DeferredUpdates.
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render_status',
+			'collection_id' => $expectedId
+		] ), true );
+		$this->assertSame( [ 'state' => 'failed' ], $ret );
+
+		// TODO: supply valid metabook
+		// TODO: precreate articles that would be included into the metabook
+		// TODO: mock ShellCommandFactory service to analyze "what command got called"
+		// and to return mocked result of "HTML-to-output-format" conversion.
 	}
 
 	// TODO: integration test for [ 'command' => 'render' ]
