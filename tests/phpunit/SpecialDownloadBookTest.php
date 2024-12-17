@@ -56,6 +56,17 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$this->runSpecial( [ 'command' => 'makesalad' ] );
 	}
 
+	/**
+	 * Checks the result when command=render is called with invalid JSON as metabook.
+	 */
+	public function testErrorRenderInvalidJson() {
+		$this->expectExceptionObject( new MWException( 'Malformed metabook parameter.' ) );
+		$this->runSpecial( [
+			'command' => 'render',
+			'metabook' => 'Invalid; JSON;'
+		] );
+	}
+
 	// TODO: integration test for [ 'command' => 'render' ]
 	// TODO: integration test for [ 'command' => 'render_status' ]
 	// TODO: integration test for [ 'command' => 'stream' ]
