@@ -123,7 +123,12 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$expectedId = 1;
 		$format = 'something-like-pdf';
 
-		// TODO: precreate articles that would be included into the metabook
+		// Precreate articles that would be included into the metabook
+		$this->editPage( 'First included article', "Text of the '''first''' article" );
+		$this->editPage( 'Second included article', "Second ''text'' in the book" );
+		$this->editPage( 'Third included article', 'Text #3' );
+
+		$expectedOutput = '<h1>Generated HTML of the requested metabook</h1> Some text.';
 		$metabook = FormatJson::encode( [
 			'title' => 'Title of collection',
 			'subtitle' => 'Subtitle of collection',
@@ -142,10 +147,20 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 				]
 			]
 		] );
-		$expectedHtmlInput = '<html><head><title>Title of collection</title></head>' .
-			'<body><h2>Subtitle of collection</h2></body></html>';
-		$expectedOutput = '<h1>Generated HTML of the requested metabook</h1> Some text.';
+		$expectedHtmlInput = <<<'ENDHTML'
+<html><head><title>Title of collection</title></head><body><h2>Subtitle of collection</h2><h1>First included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Text of the <b>first</b> article
+</p></div>
 
+<h1>Second included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Second <i>text</i> in the book
+</p></div>
+
+<h1>Third included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Text #3
+</p></div>
+
+</body></html>
+ENDHTML;
+
+		// Start rendering.
 		$ret = FormatJson::decode( $this->runSpecial( [
 			'command' => 'render',
 			'metabook' => $metabook,
@@ -247,7 +262,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	 * @param array $query Query string parameters.
 	 * @return HTML of the result.
 	 */
-	public function runSpecial( array $query ) {
+	protected function runSpecial( array $query ) {
 		[ $html, ] = $this->executeSpecialPage( '', new FauxRequest( $query, false ) );
 		return $html;
 	}
@@ -258,7 +273,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	 *
 	 * @param callable(string[]):void $callback Called when command is executed.
 	 */
-	public function mockShellCommand( $callback ) {
+	protected function mockShellCommand( $callback ) {
 		$executor = $this->createMock( UnboxedExecutor::class );
 		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback( function ( Command $command ) use ( $callback ) {
 			$argv = $command->getSyntaxInfo()->getLiteralArgv();
