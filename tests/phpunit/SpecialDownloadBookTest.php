@@ -30,6 +30,7 @@ use MediaWiki\Shell\CommandFactory;
 use MWException;
 use Shellbox\Command\UnboxedExecutor;
 use Shellbox\Command\UnboxedResult;
+use SpecialPage;
 use SpecialPageTestBase;
 
 /**
@@ -74,6 +75,43 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	}
 
 	/**
+	 * Checks the result of command=render when conversion command is missing or unusable.
+	 */
+	public function testErrorRenderNoCommand() {
+		// Remove all known conversion commands.
+		$this->overrideConfigValue( 'DownloadBookConvertCommand', [] );
+
+		// Don't run DeferredUpdates until we check [ 'state' => 'pending' ].
+		$updatesDelayed = DeferredUpdates::preventOpportunisticUpdates();
+		$expectedId = 1;
+
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render',
+			'metabook' => '{}'
+		] ), true );
+		$this->assertSame( [ 'collection_id' => $expectedId ], $ret );
+
+		// Verify that state of this task is "pending",
+		// which should be the case, because DeferredUpdates haven't been called yet.
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render_status',
+			'collection_id' => $expectedId
+		] ), true );
+		$this->assertSame( [ 'state' => 'pending' ], $ret );
+
+		// Run the pending DeferredUpdates.
+		$updatesDelayed = null;
+		DeferredUpdates::tryOpportunisticExecute();
+
+		// Verify that the task was marked as "failed" by DeferredUpdates.
+		$ret = FormatJson::decode( $this->runSpecial( [
+			'command' => 'render_status',
+			'collection_id' => $expectedId
+		] ), true );
+		$this->assertSame( [ 'state' => 'failed' ], $ret );
+	}
+
+	/**
 	 * Checks the result of command=render.
 	 */
 	public function testRender() {
@@ -81,6 +119,11 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$updatesDelayed = DeferredUpdates::preventOpportunisticUpdates();
 		$expectedId = 1;
 		$format = 'something-like-pdf';
+
+		// TODO: supply valid metabook
+		$metabook = '{}';
+		$expectedHtmlInput = '<html><body></body></html>';
+		$expectedOutput = '<h1>Generated HTML of the requested metabook</h1> Some text.';
 
 		$ret = FormatJson::decode( $this->runSpecial( [
 			'command' => 'render',
@@ -98,14 +141,14 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$this->assertSame( [ 'state' => 'pending' ], $ret );
 
 		// Mock the external command.
-		$expectedCommand = '/dev/null/there/is/no/such/command -i {INPUT} -o {OUTPUT} ' .
-			'--meta.creator={METADATA:creator} --meta.title={METADATA:title}';
 		$this->overrideConfigValue( 'DownloadBookConvertCommand', [
-			$format => $expectedCommand
+			$format => '/dev/null/there/is/no/such/command -i {INPUT} -o {OUTPUT} ' .
+				'--meta.creator={METADATA:creator} --meta.title={METADATA:title}'
 		] );
 
-		$mockedOutput = 'Invoked command will print this text.';
-		$this->mockShellCommand( function ( $argv ) use ( $expectedCommand ) {
+		$this->mockShellCommand( function ( $argv )
+			use ( $metabook, $expectedHtmlInput, $expectedOutput )
+		{
 			$this->assertCount( 7, $argv, 'argv.count' );
 
 			$inputFilename = $argv[2];
@@ -113,26 +156,40 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 
 			$this->assertSame( '/dev/null/there/is/no/such/command', $argv[0] );
 			$this->assertSame( '-i', $argv[1] );
-			$this->assertFileExists( $inputFilename, 'Input tempfile doesn\'t exist.' );
 			$this->assertSame( '-o', $argv[3] );
+			$this->assertSame( '--meta.creator=Default creator', $argv[5] );
+			$this->assertSame( '--meta.title=', $argv[6] );
+
+			$this->assertFileExists( $inputFilename, 'Input tempfile doesn\'t exist.' );
+			$this->assertSame( $expectedHtmlInput, file_get_contents( $inputFilename ) );
 			$this->assertFileExists( $outputFilename, 'Output tempfile doesn\'t exist.' );
+
+			file_put_contents( $outputFilename, $expectedOutput );
 		} );
 
 		// Run the pending DeferredUpdates.
 		$updatesDelayed = null;
 		DeferredUpdates::tryOpportunisticExecute();
 
-		// Verify that the task was marked as "failed" by DeferredUpdates.
+		// Verify that the task was marked as "finished" by DeferredUpdates.
 		$ret = FormatJson::decode( $this->runSpecial( [
 			'command' => 'render_status',
 			'collection_id' => $expectedId
 		] ), true );
-		$this->assertSame( [ 'state' => 'failed' ], $ret );
 
-		// TODO: supply valid metabook
+		$expectedUrl = SpecialPage::getTitleFor( 'DownloadBook' )->getLocalURL( [
+			'stream' => 1,
+			'collection_id' => $expectedId
+		] );
+		$this->assertSame( 'finished', $ret['state'] );
+		$this->assertSame( $expectedUrl, $ret['url'] );
+		$this->assertSame( 'text/plain', $ret['content_type'] );
+		$this->assertSame( strlen( $expectedOutput ), $ret['content_length'],
+			'Unexpected content_length of the result.' );
+		$this->assertStringStartsWith( 'inline;filename*=', $ret['content_disposition'] );
+		$this->assertStringContainsString( $format, $ret['content_disposition'] );
+
 		// TODO: precreate articles that would be included into the metabook
-		// TODO: mock ShellCommandFactory service to analyze "what command got called"
-		// and to return mocked result of "HTML-to-output-format" conversion.
 	}
 
 	// TODO: integration test for [ 'command' => 'render' ]
