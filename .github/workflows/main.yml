@@ -6,7 +6,59 @@ env:
   DBTYPE: mysql
   DBUSER: root
 
-jobs:
+jobs:  # PHPUnit testsuite (integration tests)
+  phpunit:
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [8.1]
+        branch: [REL1_43]
+
+    env:
+      branch: ${{ matrix.branch }}
+    runs-on: ubuntu-22.04
+    services:
+      memcached:
+        image: memcached:latest
+        ports:
+          - 11211:11211
+        options: --health-cmd "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/11211'" --health-interval 10s --health-timeout 5s --health-retries 5
+      mariadb:
+        image: mariadb
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            buildcache
+          key: buildcache-${{ env.branch }}-${{ hashFiles('**/no/files/need/to/invalidate/cache/for/now') }}
+
+      - uses: shivammathur/setup-php@v2
+        with:
+            php-version: ${{ matrix.php }}
+            extensions: mbstring, intl, opcache, mysqli
+            tools: composer
+      - uses: edwardspec/github-action-build-mediawiki@v1
+        with:
+          branch: ${{ env.branch }}
+          extraLocalSettings: tests/ci/DownloadBookSettings.php
+      - name: Finalize the installation of MediaWiki
+        run: |
+          rsync -a --exclude buildcache --exclude mediawiki --exclude .git . mediawiki/extensions/DownloadBook/
+          cd mediawiki
+          php maintenance/update.php --quick
+          echo '{{CURRENTVERSION}}' | php maintenance/parse.php
+
+      - name: RUN -- phpunit
+        run: |
+          cd mediawiki
+          php tests/phpunit/phpunit.php extensions/DownloadBook/tests/phpunit/
+
   # PHP linters: phpcs, parallel-lint, etc.
   linter:
     runs-on: ubuntu-22.04

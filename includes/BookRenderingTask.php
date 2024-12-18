@@ -39,9 +39,9 @@ use UploadStashException;
 use User;
 
 class BookRenderingTask {
-	const STATE_FAILED = 'failed';
-	const STATE_FINISHED = 'finished';
-	const STATE_PENDING = 'pending';
+	public const STATE_FAILED = 'failed';
+	public const STATE_FINISHED = 'finished';
+	public const STATE_PENDING = 'pending';
 
 	/**
 	 * @var int
@@ -410,7 +410,8 @@ class BookRenderingTask {
 			return Shell::escape( $metadata[$key] ?? '' );
 		}, $command );
 
-		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=(" . strlen( $html ) . " bytes omitted) into [$newFormat]..." );
+		$this->logger->debug( "[BookRenderingTask] Attempting to convert HTML=(" .
+			strlen( $html ) . " bytes omitted) into [$newFormat]..." );
 
 		// Workaround for "pandoc" trying to use current directory
 		// (to which it doesn't have write access) for its own temporary files.
