@@ -25,13 +25,16 @@ namespace MediaWiki\DownloadBook;
 use DeferredUpdates;
 use FauxRequest;
 use FormatJson;
+use LocalRepo;
 use MediaWiki\Shell\Command;
 use MediaWiki\Shell\CommandFactory;
 use MWException;
+use RepoGroup;
 use Shellbox\Command\UnboxedExecutor;
 use Shellbox\Command\UnboxedResult;
 use SpecialPage;
 use SpecialPageTestBase;
+use User;
 
 /**
  * @covers MediaWiki\DownloadBook\SpecialDownloadBook
@@ -121,6 +124,8 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$format = 'something-like-pdf';
 
 		// TODO: supply valid metabook
+		// TODO: precreate articles that would be included into the metabook
+
 		$metabook = '{}';
 		$expectedHtmlInput = '<html><body></body></html>';
 		$expectedOutput = '<h1>Generated HTML of the requested metabook</h1> Some text.';
@@ -186,15 +191,39 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$this->assertSame( 'text/plain', $ret['content_type'] );
 		$this->assertSame( strlen( $expectedOutput ), $ret['content_length'],
 			'Unexpected content_length of the result.' );
-		$this->assertStringStartsWith( 'inline;filename*=', $ret['content_disposition'] );
-		$this->assertStringContainsString( $format, $ret['content_disposition'] );
 
-		// TODO: precreate articles that would be included into the metabook
+		$disposition = $ret['content_disposition'];
+		$this->assertStringStartsWith( 'inline;filename*=', $disposition );
+		$this->assertStringContainsString( $format, $disposition );
+
+		// Mock RepoGroup service to verify that the result can be streamed.
+		$realRepo = $this->getServiceContainer()->getRepoGroup()->getLocalRepo();
+		$stash = $realRepo->getUploadStash(
+			User::newSystemUser( 'DownloadBookStash' )
+		);
+		$repo = $this->createMock( LocalRepo::class );
+		$repo->expects( $this->once() )->method( 'streamFileWithStatus' )->willReturnCallback(
+			function ( $path, $headers ) use ( $disposition, $realRepo, $expectedOutput ) {
+				$this->assertSame( [ "Content-Disposition: $disposition" ], $headers );
+
+				// Here $path is mwstore:// URL (not a filename).
+				$output = $realRepo->getBackend()->getFileContents( [ 'src' => $path ] );
+				$this->assertSame( $expectedOutput, $output,
+					'Unexpected file contents in streamFileWithStatus()' );
+			}
+		);
+		$repo->expects( $this->any() )->method( 'getUploadStash' )->willReturn( $stash );
+
+		$repoGroup = $this->createMock( RepoGroup::class );
+		$repoGroup->expects( $this->any() )->method( 'getLocalRepo' )->willReturn( $repo );
+		$this->setService( 'RepoGroup', $repoGroup );
+
+		$ret = $this->runSpecial( [
+			'stream' => 1,
+			'collection_id' => $expectedId
+		] );
+		$this->assertSame( '', $ret, 'Unexpected output from stream=1.' );
 	}
-
-	// TODO: integration test for [ 'command' => 'render' ]
-	// TODO: integration test for [ 'command' => 'render_status' ]
-	// TODO: integration test for [ 'command' => 'stream' ]
 
 	/**
 	 * Render Special:DownloadBook.
