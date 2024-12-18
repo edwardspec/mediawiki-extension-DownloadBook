@@ -233,9 +233,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$repo = $this->createMock( LocalRepo::class );
 		$repo->expects( $this->once() )->method( 'streamFileWithStatus' )->willReturnCallback(
 			function ( $path, $headers ) use ( $expectedDisposition, $realRepo, $expectedOutput ) {
-				// FIXME: BookRenderingTask::stream() should use the value of brt_disposition field.
-				// Currently it uses the filename of temporary file, which is suboptimal.
-				// $this->assertSame( [ "Content-Disposition: $expectedDisposition" ], $headers );
+				$this->assertSame( [ "Content-Disposition: $expectedDisposition" ], $headers );
 
 				// Here $path is mwstore:// URL (not a filename).
 				$output = $realRepo->getBackend()->getFileContents( [ 'src' => $path ] );

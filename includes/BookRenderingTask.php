@@ -204,10 +204,16 @@ class BookRenderingTask {
 		$this->logger->debug( "[BookRenderingTask] Going to stream #" . $this->id );
 
 		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
-		$stashKey = $dbr->selectField( 'bookrenderingtask', 'brt_stash_key',
+		$row = $dbr->selectRow( 'bookrenderingtask',
+			[
+				'brt_disposition AS disposition',
+				'brt_stash_key AS stash_key'
+			],
 			[ 'brt_id' => $this->id ],
 			__METHOD__
 		);
+
+		$stashKey = $row->stash_key ?? null;
 		if ( !$stashKey ) {
 			$this->logger->error( '[BookRenderingTask] stream(#' . $this->id . '): ' .
 				'stashKey not found in the database.' );
@@ -218,7 +224,7 @@ class BookRenderingTask {
 
 		$headers = [];
 		$headers[] = 'Content-Disposition: ' .
-			FileBackend::makeContentDisposition( 'inline', $file->getName() );
+			FileBackend::makeContentDisposition( 'inline', $row->disposition ?: $file->getName() );
 
 		$repo = MediaWikiServices::getInstance()->getRepoGroup()->getLocalRepo();
 		$repo->streamFileWithStatus( $file->getPath(), $headers );
