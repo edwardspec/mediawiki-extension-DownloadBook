@@ -13,9 +13,11 @@ jobs:  # PHPUnit testsuite (integration tests)
       matrix:
         php: [8.1]
         branch: [REL1_43]
+        dbtype: [mysql, postgres]
 
     env:
       branch: ${{ matrix.branch }}
+      DBTYPE: ${{ matrix.dbtype }}
     runs-on: ubuntu-22.04
     services:
       memcached:
@@ -30,6 +32,14 @@ jobs:  # PHPUnit testsuite (integration tests)
         ports:
           - 3306:3306
         options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: root
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
