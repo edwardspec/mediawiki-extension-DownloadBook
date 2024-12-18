@@ -147,18 +147,17 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 				]
 			]
 		] );
-		$expectedHtmlInput = <<<'ENDHTML'
-<html><head><title>Title of collection</title></head><body><h2>Subtitle of collection</h2><h1>First included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Text of the <b>first</b> article
-</p></div>
-
-<h1>Second included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Second <i>text</i> in the book
-</p></div>
-
-<h1>Third included article</h1><div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr"><p>Text #3
-</p></div>
-
-</body></html>
-ENDHTML;
+		$expectedHtmlInput = '<html><head><title>Title of collection</title></head><body>' .
+			'<h2>Subtitle of collection</h2>' .
+			'<h1>First included article</h1>' .
+			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			"<p>Text of the <b>first</b> article\n</p></div>\n\n" .
+			'<h1>Second included article</h1>' .
+			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			"<p>Second <i>text</i> in the book\n</p></div>\n\n" .
+			'<h1>Third included article</h1>' .
+			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			"<p>Text #3\n</p></div>\n\n</body></html>";
 
 		// Start rendering.
 		$ret = FormatJson::decode( $this->runSpecial( [
@@ -275,15 +274,18 @@ ENDHTML;
 	 */
 	protected function mockShellCommand( $callback ) {
 		$executor = $this->createMock( UnboxedExecutor::class );
-		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback( function ( Command $command ) use ( $callback ) {
-			$argv = $command->getSyntaxInfo()->getLiteralArgv();
-			$this->assertNotNull( $argv, 'command.argv' );
+		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback(
+			function ( Command $command ) use ( $callback )
+			{
+				$argv = $command->getSyntaxInfo()->getLiteralArgv();
+				$this->assertNotNull( $argv, 'command.argv' );
 
-			$callback( $argv );
+				$callback( $argv );
 
-			$result = new UnboxedResult();
-			return $result->exitCode( 0 );
-		} );
+				$result = new UnboxedResult();
+				return $result->exitCode( 0 );
+			}
+		);
 
 		$commandFactory = $this->createMock( CommandFactory::class );
 		$commandFactory->expects( $this->once() )->method( 'create' )->willReturn( new Command( $executor ) );

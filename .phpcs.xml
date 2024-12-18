@@ -7,6 +7,5 @@
 	<rule ref="./vendor/mediawiki/mediawiki-codesniffer/MediaWiki">
 		<!-- FIXME: this should be fixed -->
 		<exclude name="PSR12.Properties.ConstantVisibility.NotFound" />
-		<exclude name="Generic.Files.LineLength.TooLong" />
 	</rule>
 </ruleset>
