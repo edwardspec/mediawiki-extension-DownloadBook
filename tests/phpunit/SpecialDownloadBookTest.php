@@ -25,7 +25,11 @@ namespace MediaWiki\DownloadBook;
 use DeferredUpdates;
 use FauxRequest;
 use FormatJson;
+use MediaWiki\Shell\Command;
+use MediaWiki\Shell\CommandFactory;
 use MWException;
+use Shellbox\Command\UnboxedExecutor;
+use Shellbox\Command\UnboxedResult;
 use SpecialPageTestBase;
 
 /**
@@ -76,10 +80,12 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		// Don't run DeferredUpdates until we check [ 'state' => 'pending' ].
 		$updatesDelayed = DeferredUpdates::preventOpportunisticUpdates();
 		$expectedId = 1;
+		$format = 'something-like-pdf';
 
 		$ret = FormatJson::decode( $this->runSpecial( [
 			'command' => 'render',
-			'metabook' => '{}'
+			'metabook' => '{}',
+			'writer' => $format
 		] ), true );
 		$this->assertSame( [ 'collection_id' => $expectedId ], $ret );
 
@@ -90,6 +96,16 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 			'collection_id' => $expectedId
 		] ), true );
 		$this->assertSame( [ 'state' => 'pending' ], $ret );
+
+		// Mock the external command.
+		// TODO: command should contain {INPUT}, {OUTPUT}, {METADATA:title} and {METADATA:creator}.
+		$expectedCommand = '/dev/null/there/is/no/such/command';
+		$this->overrideConfigValue( 'DownloadBookConvertCommand', [
+			$format => $expectedCommand
+		] );
+
+		$mockedOutput = 'Invoked command will print this text.';
+		$this->mockShellCommand( $expectedCommand, $mockedOutput );
 
 		// Run the pending DeferredUpdates.
 		$updatesDelayed = null;
@@ -120,5 +136,25 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	public function runSpecial( array $query ) {
 		[ $html, ] = $this->executeSpecialPage( '', new FauxRequest( $query, false ) );
 		return $html;
+	}
+
+	/**
+	 * Intercept and examine the invocation of external command via Shell::command()->execute().
+	 *
+	 * @param string $expectedCommand Throw exception if invoked command isn't equal to this string.
+	 * @param string $mockedOutput Mock the invoked command to print this string to stdout.
+	 */
+	public function mockShellCommand( $expectedCommand, $mockedOutput ) {
+		$executor = $this->createMock( UnboxedExecutor::class );
+		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback( function ( Command $command ) use ( $expectedCommand, $mockedOutput ) {
+				$this->assertSame( $expectedCommand, $command->getCommandString() );
+
+				$result = new UnboxedResult();
+				return $result->stdout( $mockedOutput )->exitCode( 0 );
+		} );
+
+		$commandFactory = $this->createMock( CommandFactory::class );
+		$commandFactory->expects( $this->once() )->method( 'create' )->willReturn( new Command( $executor ) );
+		$this->setService( 'ShellCommandFactory', $commandFactory );
 	}
 }
