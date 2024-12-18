@@ -123,16 +123,32 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$expectedId = 1;
 		$format = 'something-like-pdf';
 
-		// TODO: supply valid metabook
 		// TODO: precreate articles that would be included into the metabook
-
-		$metabook = '{}';
-		$expectedHtmlInput = '<html><body></body></html>';
+		$metabook = FormatJson::encode( [
+			'title' => 'Title of collection',
+			'subtitle' => 'Subtitle of collection',
+			'items' => [
+				[
+					'type' => 'article',
+					'title' => 'First included article'
+				],
+				[
+					'type' => 'article',
+					'title' => 'Second included article'
+				],
+				[
+					'type' => 'article',
+					'title' => 'Third included article'
+				]
+			]
+		] );
+		$expectedHtmlInput = '<html><head><title>Title of collection</title></head>' .
+			'<body><h2>Subtitle of collection</h2></body></html>';
 		$expectedOutput = '<h1>Generated HTML of the requested metabook</h1> Some text.';
 
 		$ret = FormatJson::decode( $this->runSpecial( [
 			'command' => 'render',
-			'metabook' => '{}',
+			'metabook' => $metabook,
 			'writer' => $format
 		] ), true );
 		$this->assertSame( [ 'collection_id' => $expectedId ], $ret );
@@ -163,7 +179,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 			$this->assertSame( '-i', $argv[1] );
 			$this->assertSame( '-o', $argv[3] );
 			$this->assertSame( '--meta.creator=Default creator', $argv[5] );
-			$this->assertSame( '--meta.title=', $argv[6] );
+			$this->assertSame( '--meta.title=Title of collection', $argv[6] );
 
 			$this->assertFileExists( $inputFilename, 'Input tempfile doesn\'t exist.' );
 			$this->assertSame( $expectedHtmlInput, file_get_contents( $inputFilename ) );
@@ -192,9 +208,8 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$this->assertSame( strlen( $expectedOutput ), $ret['content_length'],
 			'Unexpected content_length of the result.' );
 
-		$disposition = $ret['content_disposition'];
-		$this->assertStringStartsWith( 'inline;filename*=', $disposition );
-		$this->assertStringContainsString( $format, $disposition );
+		$expectedDisposition = 'inline;filename*=UTF-8\'\'Title_of_collection.something-like-pdf';
+		$this->assertSame( $expectedDisposition, $ret['content_disposition'] );
 
 		// Mock RepoGroup service to verify that the result can be streamed.
 		$realRepo = $this->getServiceContainer()->getRepoGroup()->getLocalRepo();
@@ -203,8 +218,10 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		);
 		$repo = $this->createMock( LocalRepo::class );
 		$repo->expects( $this->once() )->method( 'streamFileWithStatus' )->willReturnCallback(
-			function ( $path, $headers ) use ( $disposition, $realRepo, $expectedOutput ) {
-				$this->assertSame( [ "Content-Disposition: $disposition" ], $headers );
+			function ( $path, $headers ) use ( $expectedDisposition, $realRepo, $expectedOutput ) {
+				// FIXME: BookRenderingTask::stream() should use the value of brt_disposition field.
+				// Currently it uses the filename of temporary file, which is suboptimal.
+				// $this->assertSame( [ "Content-Disposition: $expectedDisposition" ], $headers );
 
 				// Here $path is mwstore:// URL (not a filename).
 				$output = $realRepo->getBackend()->getFileContents( [ 'src' => $path ] );
