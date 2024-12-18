@@ -30,11 +30,11 @@ class DownloadBookUpdater {
 	 * @return bool
 	 */
 	public static function onLoadExtensionSchemaUpdates( DatabaseUpdater $updater ) {
-		$sqlDir = __DIR__ . '/../sql';
+		$sqlDir = __DIR__ . '/../sql/' . $updater->getDB()->getType();
 
 		/* Main database schema */
 		$updater->addExtensionTable( 'bookrenderingtask',
-			"$sqlDir/patch-bookrenderingtask.sql" );
+			"$sqlDir/tables-generated.sql" );
 
 		return true;
 	}

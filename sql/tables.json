@@ -1,0 +1,59 @@
+[
+	{
+		"name": "bookrenderingtask",
+		"columns": [
+			{
+				"name": "brt_id",
+				"type": "integer",
+				"options": {
+					"notnull": true,
+					"autoincrement": true,
+					"unsigned": true
+				}
+			},
+			{
+				"name": "brt_timestamp",
+				"type": "mwtimestamp",
+				"options": {
+					"notnull": true,
+					"default": "",
+					"CustomSchemaOptions": {
+						"allowInfinite": true
+					}
+
+				}
+			},
+			{
+				"name": "brt_state",
+				"comment": "String, e.g. 'pending', 'finished', 'failed'.",
+				"type": "string",
+				"options": {
+					"notnull": true,
+					"length": 32
+				}
+			},
+			{
+				"name": "brt_disposition",
+				"comment": "Human-readable filename that makes sense for output file, e.g. 'Name_of_article.pdf'. This goes into the Content-Disposition header (affects suggested filename of 'Save as'). NOTE: this is NOT a path. Where the file is stored is defined by brt_stash_key field.",
+				"type": "string",
+				"options": {
+					"default": null,
+					"notnull": false,
+					"length": 255
+				}
+			},
+			{
+				"name": "brt_stash_key",
+				"comment": "UploadStash key to retrieve the resulting image, if any.",
+				"type": "string",
+				"options": {
+					"default": null,
+					"notnull": false,
+					"length": 255
+				}
+			}
+		],
+		"pk": [ "brt_id" ],
+		"indexes": []
+	}
+]
