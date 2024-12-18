@@ -98,14 +98,25 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$this->assertSame( [ 'state' => 'pending' ], $ret );
 
 		// Mock the external command.
-		// TODO: command should contain {INPUT}, {OUTPUT}, {METADATA:title} and {METADATA:creator}.
-		$expectedCommand = '/dev/null/there/is/no/such/command';
+		$expectedCommand = '/dev/null/there/is/no/such/command -i {INPUT} -o {OUTPUT} ' .
+			'--meta.creator={METADATA:creator} --meta.title={METADATA:title}';
 		$this->overrideConfigValue( 'DownloadBookConvertCommand', [
 			$format => $expectedCommand
 		] );
 
 		$mockedOutput = 'Invoked command will print this text.';
-		$this->mockShellCommand( $expectedCommand, $mockedOutput );
+		$this->mockShellCommand( function ( $argv ) use ( $expectedCommand ) {
+			$this->assertCount( 7, $argv, 'argv.count' );
+
+			$inputFilename = $argv[2];
+			$outputFilename = $argv[4];
+
+			$this->assertSame( '/dev/null/there/is/no/such/command', $argv[0] );
+			$this->assertSame( '-i', $argv[1] );
+			$this->assertFileExists( $inputFilename, 'Input tempfile doesn\'t exist.' );
+			$this->assertSame( '-o', $argv[3] );
+			$this->assertFileExists( $outputFilename, 'Output tempfile doesn\'t exist.' );
+		} );
 
 		// Run the pending DeferredUpdates.
 		$updatesDelayed = null;
@@ -139,18 +150,21 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	}
 
 	/**
-	 * Intercept and examine the invocation of external command via Shell::command()->execute().
+	 * Intercept invocation of external command via ShellCommandFactory.
+	 * Instead of executing the command, run $callback($argv) with $argv of that command.
 	 *
-	 * @param string $expectedCommand Throw exception if invoked command isn't equal to this string.
-	 * @param string $mockedOutput Mock the invoked command to print this string to stdout.
+	 * @param callable(string[]):void $callback Called when command is executed.
 	 */
-	public function mockShellCommand( $expectedCommand, $mockedOutput ) {
+	public function mockShellCommand( $callback ) {
 		$executor = $this->createMock( UnboxedExecutor::class );
-		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback( function ( Command $command ) use ( $expectedCommand, $mockedOutput ) {
-				$this->assertSame( $expectedCommand, $command->getCommandString() );
+		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback( function ( Command $command ) use ( $callback ) {
+			$argv = $command->getSyntaxInfo()->getLiteralArgv();
+			$this->assertNotNull( $argv, 'command.argv' );
 
-				$result = new UnboxedResult();
-				return $result->stdout( $mockedOutput )->exitCode( 0 );
+			$callback( $argv );
+
+			$result = new UnboxedResult();
+			return $result->exitCode( 0 );
 		} );
 
 		$commandFactory = $this->createMock( CommandFactory::class );
