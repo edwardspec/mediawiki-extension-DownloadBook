@@ -5,7 +5,5 @@
 	<arg name="encoding" value="UTF-8" />
 
 	<rule ref="./vendor/mediawiki/mediawiki-codesniffer/MediaWiki">
-		<!-- FIXME: this should be fixed -->
-		<exclude name="PSR12.Properties.ConstantVisibility.NotFound" />
 	</rule>
 </ruleset>

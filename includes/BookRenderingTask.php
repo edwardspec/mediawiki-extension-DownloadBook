@@ -39,9 +39,9 @@ use UploadStashException;
 use User;
 
 class BookRenderingTask {
-	const STATE_FAILED = 'failed';
-	const STATE_FINISHED = 'finished';
-	const STATE_PENDING = 'pending';
+	public const STATE_FAILED = 'failed';
+	public const STATE_FINISHED = 'finished';
+	public const STATE_PENDING = 'pending';
 
 	/**
 	 * @var int
