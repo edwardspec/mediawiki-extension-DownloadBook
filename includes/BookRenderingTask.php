@@ -76,7 +76,7 @@ class BookRenderingTask {
 	 * @return int Value of collection_id (to be returned to Extension:Collection).
 	 */
 	public static function createNew( array $metabook, $newFormat ) {
-		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 		$dbw->insert( 'bookrenderingtask', [
 			'brt_timestamp' => $dbw->timestamp(),
 			'brt_state' => self::STATE_PENDING,
@@ -104,7 +104,7 @@ class BookRenderingTask {
 	 * @param string|null $newDisposition
 	 */
 	protected function changeState( $newState, $newStashKey = null, $newDisposition = null ) {
-		$dbw = MediaWikiServices::getInstance()->getConnectionProvider()->getPrimaryDatabase();
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 		$dbw->update( 'bookrenderingtask',
 			[
 				'brt_state' => $newState,
@@ -134,7 +134,7 @@ class BookRenderingTask {
 	 * @return array
 	 */
 	public function getRenderStatus() {
-		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		$row = $dbr->selectRow( 'bookrenderingtask',
 			[
 				'brt_state AS state',
@@ -203,7 +203,7 @@ class BookRenderingTask {
 	public function stream() {
 		$this->logger->debug( "[BookRenderingTask] Going to stream #" . $this->id );
 
-		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		$row = $dbr->selectRow( 'bookrenderingtask',
 			[
 				'brt_disposition AS disposition',
