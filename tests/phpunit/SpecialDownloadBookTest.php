@@ -32,6 +32,7 @@ use MWException;
 use RepoGroup;
 use Shellbox\Command\UnboxedExecutor;
 use Shellbox\Command\UnboxedResult;
+use Shellbox\ShellParser\ShellParser;
 use SpecialPage;
 use SpecialPageTestBase;
 use User;
@@ -147,16 +148,20 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 				]
 			]
 		] );
+		if ( version_compare( MW_VERSION, '1.42.0-alpha', '>=' ) ) {
+			// MediaWiki 1.42+
+			$expectedPoutTag = '<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">';
+		} else {
+			// MediaWiki 1.39-1.41
+			$expectedPoutTag = '<div class="mw-parser-output">';
+		}
 		$expectedHtmlInput = '<html><head><title>Title of collection</title></head><body>' .
 			'<h2>Subtitle of collection</h2>' .
-			'<h1>First included article</h1>' .
-			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			'<h1>First included article</h1>' . $expectedPoutTag .
 			"<p>Text of the <b>first</b> article\n</p></div>\n\n" .
-			'<h1>Second included article</h1>' .
-			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			'<h1>Second included article</h1>' . $expectedPoutTag .
 			"<p>Second <i>text</i> in the book\n</p></div>\n\n" .
-			'<h1>Third included article</h1>' .
-			'<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">' .
+			'<h1>Third included article</h1>' . $expectedPoutTag .
 			"<p>Text #3\n</p></div>\n\n</body></html>";
 
 		// Start rendering.
@@ -271,16 +276,14 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	 * @param callable(string[]):void $callback Called when command is executed.
 	 */
 	protected function mockShellCommand( $callback ) {
-		if ( !method_exists( Command::class, 'getSyntaxInfo' ) ) {
-			// MediaWiki 1.39
-			$this->markTestSkipped( 'This test requires Command::getSyntaxInfo().' );
-		}
-
 		$executor = $this->createMock( UnboxedExecutor::class );
 		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback(
 			function ( Command $command ) use ( $callback )
 			{
-				$argv = $command->getSyntaxInfo()->getLiteralArgv();
+				// MediaWiki 1.39 doesn't have $command->getSyntaxInfo()
+				$syntaxInfo = ( new ShellParser() )->parse( $command->getCommandString() )->getInfo();
+
+				$argv = $syntaxInfo->getLiteralArgv();
 				$this->assertNotNull( $argv, 'command.argv' );
 
 				$callback( $argv );
