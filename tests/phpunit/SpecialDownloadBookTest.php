@@ -271,6 +271,11 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 	 * @param callable(string[]):void $callback Called when command is executed.
 	 */
 	protected function mockShellCommand( $callback ) {
+		if ( !method_exists( Command::class, 'getSyntaxInfo' ) ) {
+			// MediaWiki 1.39
+			$this->markTestSkipped( 'This test requires Command::getSyntaxInfo().' );
+		}
+
 		$executor = $this->createMock( UnboxedExecutor::class );
 		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback(
 			function ( Command $command ) use ( $callback )
