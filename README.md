@@ -1,6 +1,5 @@
-(WARNING: this is an alpha version)
-
-Extension:DownloadBook.
+Extension:DownloadBook
+====================
 
 This extension allows Extension:Collection to generate PDF files locally.
 For example:
