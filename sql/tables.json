@@ -16,7 +16,6 @@
 				"type": "mwtimestamp",
 				"options": {
 					"notnull": true,
-					"default": "",
 					"CustomSchemaOptions": {
 						"allowInfinite": true
 					}
