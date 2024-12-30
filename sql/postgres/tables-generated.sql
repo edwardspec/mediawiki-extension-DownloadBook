@@ -4,7 +4,7 @@
 -- See https://www.mediawiki.org/wiki/Manual:Schema_changes
 CREATE TABLE bookrenderingtask (
   brt_id SERIAL NOT NULL,
-  brt_timestamp TIMESTAMPTZ DEFAULT '' NOT NULL,
+  brt_timestamp TIMESTAMPTZ NOT NULL,
   brt_state VARCHAR(32) NOT NULL,
   brt_disposition VARCHAR(255) DEFAULT NULL,
   brt_stash_key VARCHAR(255) DEFAULT NULL,
