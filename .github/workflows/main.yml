@@ -57,6 +57,8 @@ jobs:  # PHPUnit testsuite (integration tests)
         with:
           branch: ${{ env.branch }}
           extraLocalSettings: tests/ci/DownloadBookSettings.php
+          dbtype: ${{ env.DBTYPE }}
+          dbserver: ${{ env.DBTYPE == 'mysql' && '127.0.0.1:3306' || '127.0.0.1' }}
       - name: Finalize the installation of MediaWiki
         run: |
           rsync -a --exclude buildcache --exclude mediawiki --exclude .git . mediawiki/extensions/DownloadBook/
