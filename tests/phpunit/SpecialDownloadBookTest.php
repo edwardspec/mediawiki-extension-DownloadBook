@@ -2,7 +2,7 @@
 
 /*
 	Extension:DownloadBook - MediaWiki extension.
-	Copyright (C) 2024 Edward Chernenko.
+	Copyright (C) 2024-2025 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -23,16 +23,15 @@
 namespace MediaWiki\DownloadBook;
 
 use DeferredUpdates;
-use FauxRequest;
 use FormatJson;
 use LocalRepo;
+use MediaWiki\Request\FauxRequest;
 use MediaWiki\Shell\Command;
 use MediaWiki\Shell\CommandFactory;
 use MWException;
 use RepoGroup;
 use Shellbox\Command\UnboxedExecutor;
 use Shellbox\Command\UnboxedResult;
-use Shellbox\ShellParser\ShellParser;
 use SpecialPage;
 use SpecialPageTestBase;
 use User;
@@ -44,11 +43,6 @@ use User;
 class SpecialDownloadBookTest extends SpecialPageTestBase {
 	protected function newSpecialPage() {
 		return new SpecialDownloadBook();
-	}
-
-	protected function setUp(): void {
-		parent::setUp();
-		$this->tablesUsed[] = 'bookrenderingtask';
 	}
 
 	/**
@@ -148,13 +142,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 				]
 			]
 		] );
-		if ( version_compare( MW_VERSION, '1.42.0-alpha', '>=' ) ) {
-			// MediaWiki 1.42+
-			$expectedPoutTag = '<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">';
-		} else {
-			// MediaWiki 1.39-1.41
-			$expectedPoutTag = '<div class="mw-parser-output">';
-		}
+		$expectedPoutTag = '<div class="mw-content-ltr mw-parser-output" lang="en" dir="ltr">';
 		$expectedHtmlInput = '<html><head><title>Title of collection</title></head><body>' .
 			'<h2>Subtitle of collection</h2>' .
 			'<h1>First included article</h1>' . $expectedPoutTag .
@@ -280,10 +268,7 @@ class SpecialDownloadBookTest extends SpecialPageTestBase {
 		$executor->expects( $this->once() )->method( 'execute' )->willReturnCallback(
 			function ( Command $command ) use ( $callback )
 			{
-				// MediaWiki 1.39 doesn't have $command->getSyntaxInfo()
-				$syntaxInfo = ( new ShellParser() )->parse( $command->getCommandString() )->getInfo();
-
-				$argv = $syntaxInfo->getLiteralArgv();
+				$argv = $command->getSyntaxInfo()->getLiteralArgv();
 				$this->assertNotNull( $argv, 'command.argv' );
 
 				$callback( $argv );

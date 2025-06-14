@@ -2,7 +2,7 @@
 
 /*
 	Extension:DownloadBook - MediaWiki extension.
-	Copyright (C) 2020-2024 Edward Chernenko.
+	Copyright (C) 2020-2025 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,21 +22,22 @@
 
 namespace MediaWiki\DownloadBook;
 
-use DeferredUpdates;
-use FileBackend;
-use FormatJson;
-use Html;
+use MediaWiki\Content\TextContent;
+use MediaWiki\Context\RequestContext;
+use MediaWiki\Deferred\DeferredUpdates;
+use MediaWiki\Html\Html;
+use MediaWiki\Json\FormatJson;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Shell\Shell;
+use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
+use MediaWiki\User\User;
 use MWException;
-use RequestContext;
-use SpecialPage;
-use TempFSFile;
-use TextContent;
-use Title;
 use UploadStashException;
-use User;
+use Wikimedia\FileBackend\FileBackend;
+use Wikimedia\FileBackend\FSFile\TempFSFile;
 
 class BookRenderingTask {
 	public const STATE_FAILED = 'failed';
@@ -315,15 +316,19 @@ class BookRenderingTask {
 			}
 
 			$localParser = MediaWikiServices::getInstance()->getParser();
-			$popts = RequestContext::getMain()->getOutput()->parserOptions();
+			$popts = ParserOptions::newFromContext( RequestContext::getMain() );
 			$pout = $localParser->parse(
 				$content->getText(),
 				$title,
 				$popts
-				);
+			);
+
+			// Remove edit section links.
+			$pipeline = MediaWikiServices::getInstance()->getDefaultOutputPipeline();
+			$pout = $pipeline->run( $pout, $popts, [ 'enableSectionEditLinks' => false ] );
 
 			$html .= Html::element( 'h1', [], $title->getFullText() );
-			$html .= $pout->getText( [ 'enableSectionEditLinks' => false ] );
+			$html .= $pout->getRawText();
 			$html .= "\n\n";
 		}
 

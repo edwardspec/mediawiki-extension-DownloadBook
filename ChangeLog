@@ -2,7 +2,13 @@ List of changes between releases of Extension:DownloadBook.
 
 == master branch (will become DownloadBook 0.1.2 or 0.2.0, depending on magnitude of changes) ==
 
-No changes since DownloadBook 0.1.1.
+Note: this version requires MediaWiki 1.43+. MediaWiki 1.39 is no longer supported.
+
+Features:
+* Support MediaWiki 1.44.
+
+Refactoring, performance optimizations:
+* Removed legacy code for MediaWiki 1.39-1.42.
 
 == DownloadBook 0.1.1  ==
 
