@@ -14,6 +14,13 @@ jobs:  # PHPUnit testsuite (integration tests)
         php: [8.2]
         branch: [REL1_43, REL1_44, REL1_45]
         dbtype: [mysql, postgres]
+        include:
+           - php: 8.3
+             branch: REL1_46
+             dbtype: mysql
+           - php: 8.3
+             branch: REL1_46
+             dbtype: postgres
 
     env:
       branch: ${{ matrix.branch }}
@@ -41,8 +48,8 @@ jobs:  # PHPUnit testsuite (integration tests)
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v5
         with:
           path: |
             buildcache
@@ -69,18 +76,18 @@ jobs:  # PHPUnit testsuite (integration tests)
       - name: RUN -- phpunit
         run: |
           cd mediawiki
-          php tests/phpunit/phpunit.php extensions/DownloadBook/tests/phpunit/
+          composer phpunit extensions/DownloadBook/tests/phpunit/
 
   # PHP linters: phpcs, parallel-lint, etc.
   linter:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
             php-version: '8.2'
             tools: composer
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.composer/cache
           key: buildcache-linter
@@ -93,13 +100,13 @@ jobs:  # PHPUnit testsuite (integration tests)
     env:
       branch: REL1_43
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
         with:
             php-version: '8.2'
             extensions: ast
             tools: composer
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.composer/cache
