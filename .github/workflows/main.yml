@@ -21,6 +21,12 @@ jobs:  # PHPUnit testsuite (integration tests)
            - php: 8.3
              branch: REL1_46
              dbtype: postgres
+           - php: 8.3
+             branch: REL1_47
+             dbtype: mysql
+           - php: 8.3
+             branch: REL1_47
+             dbtype: postgres
 
     env:
       branch: ${{ matrix.branch }}
