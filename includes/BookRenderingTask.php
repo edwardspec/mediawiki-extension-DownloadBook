@@ -375,7 +375,7 @@ class BookRenderingTask {
 		// Form a human-readable name for this file when it gets downloaded via the browser,
 		// e.g. "Name_of_the_article.pdf".
 		$disposition = null;
-		$extension = $tmpFile->extensionFromPath( $tmpFile->getPath() );
+		$extension = FileBackend::extensionFromPath( $tmpFile->getPath() );
 		if ( isset( $metadata['title'] ) && $extension ) {
 			$disposition = strtr( $metadata['title'], ' ', '_' ) . '.' . $extension;
 		}
