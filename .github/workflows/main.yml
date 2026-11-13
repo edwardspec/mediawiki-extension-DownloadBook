@@ -25,7 +25,7 @@ jobs:  # PHPUnit testsuite (integration tests)
     env:
       branch: ${{ matrix.branch }}
       DBTYPE: ${{ matrix.dbtype }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       memcached:
         image: memcached:latest
@@ -80,7 +80,7 @@ jobs:  # PHPUnit testsuite (integration tests)
 
   # PHP linters: phpcs, parallel-lint, etc.
   linter:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: shivammathur/setup-php@v2
@@ -96,7 +96,7 @@ jobs:  # PHPUnit testsuite (integration tests)
 
   # Phan (PHP static analyzer)
   phan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       branch: REL1_43
     steps:
