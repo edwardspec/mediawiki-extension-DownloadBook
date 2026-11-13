@@ -2,7 +2,7 @@
 
 /*
 	Extension:DownloadBook - MediaWiki extension.
-	Copyright (C) 2020-2025 Edward Chernenko.
+	Copyright (C) 2020-2026 Edward Chernenko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -328,7 +328,7 @@ class BookRenderingTask {
 			$pout = $pipeline->run( $pout, $popts, [ 'enableSectionEditLinks' => false ] );
 
 			$html .= Html::element( 'h1', [], $title->getFullText() );
-			$html .= $pout->getRawText();
+			$html .= $pout->getContentHolderText();
 			$html .= "\n\n";
 		}
 
